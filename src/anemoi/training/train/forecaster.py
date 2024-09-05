@@ -163,21 +163,18 @@ class GraphForecaster(pl.LightningModule):
         for key, idx in data_indices.internal_model.output.name_to_index.items():
             # Split pressure levels on "_" separator
             split = key.split("_")
-            if len(split) > 1 and split[-1].isdigit():
-                # Create grouped metrics for pressure levels (e.g. Q, T, U, V, etc.) for logger
-                metric_ranges[f"pl_{split[0]}"].append(idx)
-                # Create pressure levels in loss scaling vector
-                if split[0] in config.training.feature_weighting.pl:
-                    loss_scaling[idx] = config.training.feature_weighting.pl[split[0]] * pressure_level.scaler(
-                        int(split[-1]),
-                    )
+            if len(split) > 1:
+                # Apply pressure level scaling
+                # if split[0] in config.training.feature_weights.pl:
+                if split[0] in config.training.loss_scaling.pl:
+                    feature_weights[idx] = config.training.loss_scaling.pl[split[0]] * pressure_level.scaler(int(split[1]))
                 else:
                     LOGGER.debug("Parameter %s was not scaled.", key)
             else:
-                metric_ranges[f"sfc_{key}"].append(idx)
-                # Create surface variables in loss scaling vector
-                if key in config.training.feature_weighting.sfc:
-                    loss_scaling[idx] = config.training.feature_weighting.sfc[key]
+                # Apply surface variable scaling
+                # if key in config.training.feature_weights.sfc:
+                if key in config.training.loss_scaling.sfc:
+                    feature_weights[idx] = config.training.loss_scaling.sfc[key]
                 else:
                     LOGGER.debug("Parameter %s was not scaled.", key)
             # Create specific metrics from hydra to log in logger
