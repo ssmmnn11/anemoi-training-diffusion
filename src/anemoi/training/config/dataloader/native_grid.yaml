@@ -35,7 +35,7 @@ limit_batches:
 # See https://anemoi-datasets.readthedocs.io
 # ============
 
-dataset: ${hardware.paths.data}/${hardware.files.dataset}
+dataset: aifs-ea-an-oper-0001-mars-${data.resolution}-1979-2022-6h-v6
 
 training:
   dataset: ${dataloader.dataset}
