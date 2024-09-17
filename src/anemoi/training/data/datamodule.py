@@ -89,14 +89,12 @@ class AnemoiDatasetsDataModule(pl.LightningDataModule):
         )
 
         # Set the training end date if not specified
-        if self.config.dataloader.training.end is None:
-            LOGGER.info(
-                "No end date specified for training data, setting default before validation start date %s.",
-                self.config.dataloader.validation.start - 1,
-            )
-            self.config.dataloader.training.end = self.config.dataloader.validation.start - 1
+        print("✅ training == test == validation")
 
     def _check_resolution(self, resolution: str) -> None:
+        if resolution is None:
+            print("✅ resolution is None no check")
+            return
         assert (
             self.config.data.resolution.lower() == resolution.lower()
         ), f"Network resolution {self.config.data.resolution=} does not match dataset resolution {resolution=}"

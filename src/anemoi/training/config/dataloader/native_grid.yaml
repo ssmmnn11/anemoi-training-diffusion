@@ -35,24 +35,24 @@ limit_batches:
 # See https://anemoi-datasets.readthedocs.io
 # ============
 
-dataset: aifs-ea-an-oper-0001-mars-${data.resolution}-1979-2022-6h-v6
 
-training:
-  dataset: ${dataloader.dataset}
-  start: null
-  end: 2020
-  frequency: ${data.frequency}
-  drop:  []
+dataset:
+  observations: # for now observations must be on top level, will be removed
+    multiple: # automatically pad the datasets with the min and max dates, will be renamed to zip
+      - dataset: observations-ea-ofb-0001-2004-2023-combined-metar-v1
+        frequency: 6h # this may become optional
+        window: (-6, 0) # this may become optional
+        rename_prefix: metar # this may become optional
+        is_observations: true # will disappear
+        select:
+          - cos_latitude
+          - sin_latitude
+          - cos_longitude
+          - sin_longitude
+          - stalt
+          - t2m_0
+      - dataset: aifs-ea-an-oper-0001-mars-o96-1979-2022-6h-v6
 
-validation:
-  dataset: ${dataloader.dataset}
-  start: 2021
-  end: 2021
-  frequency: ${data.frequency}
-  drop:  []
-
-test:
-  dataset: ${dataloader.dataset}
-  start: 2022
-  end: null
-  frequency: ${data.frequency}
+training: ${dataloader.dataset}
+validation: ${dataloader.dataset}
+test: ${dataloader.dataset}

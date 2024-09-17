@@ -79,7 +79,7 @@ dataset:
         - rawbt_2
         - rawbt_22
     - dataset: aifs-ea-an-oper-0001-mars-o96-1979-2022-6h-v6
-    
+
  training:
   dataset: ${dataloader.dataset}
   start: 2017-01-01 00:00:00
