@@ -1,0 +1,8 @@
+dataset: aifs-ea-an-oper-0001-mars-${data.resolution}-1979-2022-6h-v6.zarr
+graph: graph_enc_proc_dec_${data.resolution}.pt
+
+checkpoint:
+  every_n_epochs: anemoi-by_epoch-epoch_{epoch:03d}-step_{step:06d}
+  every_n_train_steps: anemoi-by_step-epoch_{epoch:03d}-step_{step:06d}
+  every_n_minutes: anemoi-by_time-epoch_{epoch:03d}-step_{step:06d}
+warm_start: null

@@ -72,7 +72,7 @@ log:
     offline: False
     log_model: False
     project: 'Anemoi'
-    entity: ???
+    entity: []
     # logger options (these probably come with some overhead)
     gradients: False
     parameters: False
@@ -83,9 +83,9 @@ log:
     offline: False
     authentication: False
     log_model: False
-    tracking_uri: ???
-    experiment_name: 'anemoi-debug'
-    project_name: 'Anemoi'
+    tracking_uri: 'https://mlflow.copernicus-climate.eu'
+    experiment_name: 'anemoi+obs-debug'
+    project_name: 'Anemoi+OBS'
     system: True
     terminal: True
     run_name: null # If set to null, the run name will be the a random UUID

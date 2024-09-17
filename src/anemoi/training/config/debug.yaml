@@ -2,7 +2,7 @@ defaults:
 - data: zarr
 - dataloader: native_grid
 - diagnostics: eval_rollout
-- hardware: example
+- hardware: atos
 - graph: multi_scale
 - model: gnn
 - training: default
@@ -21,7 +21,7 @@ diagnostics:
     enabled: False
 hardware:
   files:
-    graph: ???
+    graph: graph_enc_proc_dec_${data.resolution}.pt
 model:
   num_channels: 128
 dataloader:
