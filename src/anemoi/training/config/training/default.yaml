@@ -21,8 +21,8 @@ accum_grad_batches: 1
 
 # clipp gradients, 0 : don't clip, default algorithm: norm, alternative: value
 gradient_clip:
-  val: 32.
-  algorithm: value
+  val: 1.
+  algorithm: norm
 
 # for diffusion training
 noise:
@@ -57,9 +57,9 @@ max_epochs: 200
 max_steps: -1
 lr:
   warmup_steps: 1000
-  rate: 0.625e-4 #local_lr
+  rate: 0.0000625
   iterations: 300000
-  min: 3e-7
+  min: 0
 
 # Changes in per-gpu batch_size should come with a rescaling of the local_lr
 # in order to keep a constant global_lr
