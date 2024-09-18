@@ -7,7 +7,7 @@ load_weights_only: null # only load model weights, do not restore optimiser stat
 deterministic: False
 
 # miscellaneous
-precision: 16-mixed
+precision: bf16-mixed
 
 # multistep input
 # 1 = single step scheme, X(t-1) used to predict X(t)
