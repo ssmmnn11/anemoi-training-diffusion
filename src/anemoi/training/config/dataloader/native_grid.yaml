@@ -42,17 +42,18 @@ training:
   start: null
   end: 2020
   frequency: ${data.frequency}
-  drop:  []
+  drop:  [sp, 2d, skt, tcw]
 
 validation:
   dataset: ${dataloader.dataset}
   start: 2021
   end: 2021
   frequency: ${data.frequency}
-  drop:  []
+  drop:  [sp, 2d, skt, tcw]
 
 test:
   dataset: ${dataloader.dataset}
   start: 2022
   end: null
   frequency: ${data.frequency}
+  drop:  [sp, 2d, skt, tcw]

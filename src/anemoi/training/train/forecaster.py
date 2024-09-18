@@ -120,9 +120,12 @@ class GraphForecaster(pl.LightningModule):
         )
         self.lr_iterations = config.training.lr.iterations
         self.lr_min = config.training.lr.min
+        self.optimizer_warmup_steps = config.training.lr.warmup_steps
         self.rollout = config.training.rollout.start
         self.rollout_epoch_increment = config.training.rollout.epoch_increment
         self.rollout_max = config.training.rollout.max
+
+        self.rho = config.training.noise.rho
 
         self.use_zero_optimizer = config.training.zero_optimizer
 
@@ -141,8 +144,8 @@ class GraphForecaster(pl.LightningModule):
             config.hardware.num_gpus_per_node * config.hardware.num_nodes / config.hardware.num_gpus_per_model,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x, self.model_comm_group)
+    def forward(self, x: torch.Tensor, state_in: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
+        return self.model(x, state_in, sigma, self.model_comm_group)
 
     def metrics_loss_scaling(self, config: DictConfig, data_indices: IndexCollection) -> tuple[dict, torch.Tensor]:
         metric_ranges = defaultdict(list)
@@ -163,18 +166,21 @@ class GraphForecaster(pl.LightningModule):
         for key, idx in data_indices.internal_model.output.name_to_index.items():
             # Split pressure levels on "_" separator
             split = key.split("_")
-            if len(split) > 1:
-                # Apply pressure level scaling
-                # if split[0] in config.training.feature_weights.pl:
-                if split[0] in config.training.loss_scaling.pl:
-                    feature_weights[idx] = config.training.loss_scaling.pl[split[0]] * pressure_level.scaler(int(split[1]))
+            if len(split) > 1 and split[-1].isdigit():
+                # Create grouped metrics for pressure levels (e.g. Q, T, U, V, etc.) for logger
+                metric_ranges[f"pl_{split[0]}"].append(idx)
+                # Create pressure levels in loss scaling vector
+                if split[0] in config.training.feature_weighting.pl:
+                    loss_scaling[idx] = config.training.feature_weighting.pl[split[0]] * pressure_level.scaler(
+                        int(split[-1]),
+                    )
                 else:
                     LOGGER.debug("Parameter %s was not scaled.", key)
             else:
-                # Apply surface variable scaling
-                # if key in config.training.feature_weights.sfc:
-                if key in config.training.loss_scaling.sfc:
-                    feature_weights[idx] = config.training.loss_scaling.sfc[key]
+                metric_ranges[f"sfc_{key}"].append(idx)
+                # Create surface variables in loss scaling vector
+                if key in config.training.feature_weighting.sfc:
+                    loss_scaling[idx] = config.training.feature_weighting.sfc[key]
                 else:
                     LOGGER.debug("Parameter %s was not scaled.", key)
             # Create specific metrics from hydra to log in logger
@@ -310,7 +316,7 @@ class GraphForecaster(pl.LightningModule):
         metrics = {}
 
         # Get batch tendencies from non processed batch
-        batch_tendency_target = self.compute_target_tendency(
+        batch_tendency_target = self.model.compute_target_tendency(
             batch[:, self.multi_step : self.multi_step + self.rollout, ...],
             batch[:, self.multi_step - 1 : self.multi_step + self.rollout - 1, ...],
         )
@@ -321,19 +327,41 @@ class GraphForecaster(pl.LightningModule):
         y_preds = []
         for rollout_step in range(self.rollout):
 
+            assert rollout_step == 0, "Diffusion model only supports single step training"
+
             # normalise inputs
             x_in = self.model.pre_processors_state(x, in_place=False, data_index=self.data_indices.data.input.full)
 
-            # prediction (normalized tendency)
-            tendency_pred = self(x_in)
-
+            # compute target tendency (normalised)
             tendency_target = batch_tendency_target[:, rollout_step]
+
+            rnd_uniform = torch.rand(
+                [tendency_target.shape[0], tendency_target.shape[1], 1, 1],
+                device=tendency_target.device,
+            )  # bs, ensemble size, latlon, nvar
+
+            sigma = (
+                self.model.sigma_max ** (1.0 / self.rho)
+                + rnd_uniform * (self.model.sigma_min ** (1.0 / self.rho) - self.model.sigma_max ** (1.0 / self.rho))
+            ) ** self.rho
+            weight = (sigma**2 + self.model.sigma_data**2) / (sigma * self.model.sigma_data) ** 2
+
+            # prediction
+            n = torch.randn_like(tendency_target) * sigma
+            tendency_target_noised = tendency_target + n
+
+            tendency_pred = self.model.fwd_with_preconditioning(
+                tendency_target_noised,
+                sigma,
+                x_in,
+                model_comm_group=self.model_comm_group,
+            )
 
             # calculate loss
             if use_checkpoint:
-                loss += checkpoint(self.loss, tendency_pred, tendency_target, use_reentrant=False)
+                loss += checkpoint(self.loss, tendency_pred, tendency_target, weights=weight, use_reentrant=False)
             else:
-                loss += self.loss(tendency_pred, tendency_target)
+                loss += self.loss(tendency_pred, tendency_target, weights=weight)
 
             # re-construct non-processed predicted state
             y_pred = self.model.add_tendency_to_state(x[:, -1, ...], tendency_pred)
@@ -354,6 +382,8 @@ class GraphForecaster(pl.LightningModule):
                     y_postprocessed=y,
                 )
 
+                # here we would like to plot noised targets as well
+
                 metrics.update(metrics_next)
 
                 y_preds.extend(
@@ -366,20 +396,6 @@ class GraphForecaster(pl.LightningModule):
         # scale loss
         loss *= 1.0 / self.rollout
         return loss, metrics, y_preds
-
-    def compute_target_tendency(self, x_t1: torch.Tensor, x_t0: torch.Tensor) -> torch.Tensor:
-        tendency = self.model.pre_processors_tendency(
-            x_t1[..., self.data_indices.data.output.full] - x_t0[..., self.data_indices.data.output.full],
-            in_place=False,
-            data_index=self.data_indices.data.output.full,
-        )
-        # diagnostic variables are taken from x_t1, normalised as full fields:
-        tendency[..., self.data_indices.model.output.diagnostic] = self.model.pre_processors_state(
-            x_t1[..., self.data_indices.data.output.diagnostic],
-            in_place=False,
-            data_index=self.data_indices.data.output.diagnostic,
-        )
-        return tendency
 
     def calculate_val_metrics(
         self,
@@ -494,6 +510,6 @@ class GraphForecaster(pl.LightningModule):
             optimizer,
             lr_min=self.lr_min,
             t_initial=self.lr_iterations,
-            warmup_t=1000,
+            warmup_t=self.optimizer_warmup_steps,
         )
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]

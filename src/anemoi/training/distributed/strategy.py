@@ -158,5 +158,5 @@ class DDPGroupStrategy(DDPStrategy):
         note: the trainable parameters are added before the split across GPUs and are therefore not rescaled.
         """
         for name, param in self.model.named_parameters():
-            if param.requires_grad is True and "trainable" not in name:
+            if param.requires_grad is True and "trainable" not in name and "noise" not in name:
                 param.register_hook(lambda grad: grad * float(self.model_comm_group_size))

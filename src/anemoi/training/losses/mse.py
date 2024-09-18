@@ -14,6 +14,7 @@ import logging
 import torch
 from torch import nn
 
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -51,8 +52,10 @@ class WeightedMSELoss(nn.Module):
         pred: torch.Tensor,
         target: torch.Tensor,
         squash: bool = True,
+        weights: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        """Calculates the lat-weighted MSE loss.
+        """
+        Calculates the lat-weighted MSE loss.
 
         Parameters
         ----------
@@ -62,6 +65,8 @@ class WeightedMSELoss(nn.Module):
             Target tensor, shape (bs, lat*lon, n_outputs)
         squash : bool, optional
             Average last dimension, by default True
+        weights : torch.Tensor, optional
+            weight for EDM (diffusion) training
 
         Returns
         -------
@@ -70,6 +75,10 @@ class WeightedMSELoss(nn.Module):
 
         """
         out = torch.square(pred - target)
+
+        if isinstance(weights, torch.Tensor):
+            out = out * weights
+
         if hasattr(self, "feature_weights"):
             out *= self.feature_weights
 
