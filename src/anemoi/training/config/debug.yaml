@@ -3,7 +3,7 @@ defaults:
 - dataloader: native_grid
 - diagnostics: eval_rollout
 - hardware: atos
-- graph: multi_scale
+- graph: processor_only
 - model: gnn
 - training: default
 - _self_
