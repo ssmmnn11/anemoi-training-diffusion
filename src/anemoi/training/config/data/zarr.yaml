@@ -25,7 +25,6 @@ forcing:
 # but are not used as the input to the model
 diagnostic:
 - tp
-- cp
 remapped:
 
 normalizers:

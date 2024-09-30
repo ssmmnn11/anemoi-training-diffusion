@@ -316,7 +316,7 @@ class GraphForecaster(pl.LightningModule):
         metrics = {}
 
         # Get batch tendencies from non processed batch
-        batch_tendency_target = self.model.compute_target_tendency(
+        batch_tendency_target = self.model.compute_tendency(
             batch[:, self.multi_step : self.multi_step + self.rollout, ...],
             batch[:, self.multi_step - 1 : self.multi_step + self.rollout - 1, ...],
         )

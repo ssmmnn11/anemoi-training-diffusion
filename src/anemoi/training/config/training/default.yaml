@@ -99,7 +99,7 @@ pressure_level_scaler:
   slope: 0.0001659751037 # 1./6025 -> 1./sum(1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100, 50)
 
 # Prediction strategy can be either 'tendency', 'residual' or 'state'
-prediction_strategy: residual
+prediction_strategy: tendency
 
-num_saniity_val_steps: 4
+num_sanity_val_steps: 4
 check_val_every_n_epoch: 1
