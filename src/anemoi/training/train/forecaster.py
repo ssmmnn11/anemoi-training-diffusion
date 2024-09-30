@@ -295,7 +295,7 @@ class GraphForecaster(pl.LightningModule):
 
         # scale loss
         loss *= 1.0 / self.rollout
-        return loss, metrics, y_preds
+        return loss, metrics, y_preds, None
 
     def _step_tendency(
         self,
@@ -325,6 +325,7 @@ class GraphForecaster(pl.LightningModule):
         x = batch[:, 0 : self.multi_step, ..., self.data_indices.data.input.full]  # (bs, multi_step, latlon, nvar)
 
         y_preds = []
+        y_noiseds = []  # these are inital state + noised target tendency
         for rollout_step in range(self.rollout):
 
             assert rollout_step == 0, "Diffusion model only supports single step training"
@@ -371,6 +372,7 @@ class GraphForecaster(pl.LightningModule):
 
             if validation_mode:
                 y = batch[:, self.multi_step + rollout_step, ..., self.data_indices.data.output.full]
+                y_noised = self.model.add_tendency_to_state(x[:, -1, ...], tendency_target_noised)
 
                 # calculate_val_metrics requires processed inputs
                 metrics_next, _ = self.calculate_val_metrics(
@@ -382,8 +384,6 @@ class GraphForecaster(pl.LightningModule):
                     y_postprocessed=y,
                 )
 
-                # here we would like to plot noised targets as well
-
                 metrics.update(metrics_next)
 
                 y_preds.extend(
@@ -393,9 +393,17 @@ class GraphForecaster(pl.LightningModule):
                         data_index=self.data_indices.data.output.full,
                     ),
                 )
+                if self.enable_plot:
+                    y_noiseds.extend(
+                        self.model.pre_processors_state(
+                            y_noised,
+                            in_place=False,
+                            data_index=self.data_indices.data.output.full,
+                        ),
+                    )
         # scale loss
         loss *= 1.0 / self.rollout
-        return loss, metrics, y_preds
+        return loss, metrics, y_preds, y_noiseds
 
     def calculate_val_metrics(
         self,
@@ -424,7 +432,7 @@ class GraphForecaster(pl.LightningModule):
         return metrics, y_preds
 
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
-        train_loss, _, _ = self._step(batch, batch_idx)
+        train_loss, _, _, _ = self._step(batch, batch_idx)
         self.log(
             "train_wmse",
             train_loss,
@@ -467,7 +475,7 @@ class GraphForecaster(pl.LightningModule):
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> None:
         with torch.no_grad():
-            val_loss, metrics, y_preds = self._step(batch, batch_idx, validation_mode=True)
+            val_loss, metrics, y_preds, y_noiseds = self._step(batch, batch_idx, validation_mode=True)
         self.log(
             "val_wmse",
             val_loss,
@@ -489,7 +497,7 @@ class GraphForecaster(pl.LightningModule):
                 batch_size=batch.shape[0],
                 sync_dist=True,
             )
-        return val_loss, y_preds
+        return val_loss, y_preds, y_noiseds
 
     def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict]]:
         if self.use_zero_optimizer:

@@ -332,6 +332,7 @@ def plot_predicted_multilevel_flat_sample(
     x: np.ndarray,
     y_true: np.ndarray,
     y_pred: np.ndarray,
+    y_noised: np.ndarray,
     precip_and_related_fields: list | None = None,
 ) -> Figure:
     """Plots data for one multilevel latlon-"flat" sample.
@@ -357,6 +358,8 @@ def plot_predicted_multilevel_flat_sample(
         Expected data of shape (lat*lon, nvar*level)
     y_pred : np.ndarray
         Predicted data of shape (lat*lon, nvar*level)
+    y_noised : np.ndarray
+        noised expected data (lat*lon, nvar*level)
     precip_and_related_fields : list, optional
         List of precipitation-like variables, by default []
 
@@ -379,6 +382,7 @@ def plot_predicted_multilevel_flat_sample(
         xt = x[..., variable_idx].squeeze() * int(output_only)
         yt = y_true[..., variable_idx].squeeze()
         yp = y_pred[..., variable_idx].squeeze()
+        yn = y_noised[..., variable_idx].squeeze()
         if n_plots_x > 1:
             plot_flat_sample(
                 fig,
@@ -388,6 +392,7 @@ def plot_predicted_multilevel_flat_sample(
                 xt,
                 yt,
                 yp,
+                yn,
                 variable_name,
                 clevels,
                 cmap_precip,
@@ -402,6 +407,7 @@ def plot_predicted_multilevel_flat_sample(
                 xt,
                 yt,
                 yp,
+                yn,
                 variable_name,
                 clevels,
                 cmap_precip,
@@ -419,6 +425,7 @@ def plot_flat_sample(
     input_: np.ndarray,
     truth: np.ndarray,
     pred: np.ndarray,
+    noised: np.ndarray,
     vname: str,
     clevels: float,
     cmap_precip: str,
@@ -444,6 +451,8 @@ def plot_flat_sample(
         Expected data of shape (lat*lon,)
     pred : np.ndarray
         Predicted data of shape (lat*lon,)
+    noised : np.ndarray
+        Noised expected data of shape (lat*lon,)
     vname : str
         Variable name
     clevels : float
@@ -467,6 +476,7 @@ def plot_flat_sample(
         # converting to mm from m
         truth *= 1000.0
         pred *= 1000.0
+        noised *= 1000.0
         scatter_plot(fig, ax[1], lon=lon, lat=lat, data=truth, cmap=precip_colormap, norm=norm, title=f"{vname} target")
         scatter_plot(fig, ax[2], lon=lon, lat=lat, data=pred, cmap=precip_colormap, norm=norm, title=f"{vname} pred")
         scatter_plot(
@@ -563,10 +573,30 @@ def plot_flat_sample(
                 norm=TwoSlopeNorm(vcenter=0.0),
                 title=f"{vname} persist err",
             )
+            scatter_plot(
+                fig,
+                ax[6],
+                lon=lon,
+                lat=lat,
+                data=noised - input_,
+                cmap="bwr",
+                norm=TwoSlopeNorm(vcenter=0.0),
+                title=f"{vname} noised persist err",
+            )
     else:
         ax[0].axis("off")
         ax[4].axis("off")
         ax[5].axis("off")
+        scatter_plot(
+            fig,
+            ax[6],
+            lon=lon,
+            lat=lat,
+            data=noised,
+            cmap="bwr",
+            norm=TwoSlopeNorm(vcenter=0.0),
+            title=f"{vname} noised",
+        )
 
 
 def scatter_plot(

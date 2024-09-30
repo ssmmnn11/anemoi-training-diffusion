@@ -58,14 +58,15 @@ data:
 
 dataloader:
   limit_batches:
-    training: null
-    validation: null
+    training: 20
+    validation: 10
   batch_size:
-    training: 4
-    validation: 4
-    test: 4
-    predict: 4
+    training: 1
+    validation: 1
+    test: 1
+    predict: 1
 
 training:
   rate: 10e-4
-  max_epochs: 100
+  max_epochs: 1
+  num_sanity_val_steps: 0

@@ -9,7 +9,7 @@ plot:
   asynchronous: true
   frequency: 750
   sample_idx: 0
-  per_sample: 6
+  per_sample: 7
   parameters:
   - z_500
   - t_850

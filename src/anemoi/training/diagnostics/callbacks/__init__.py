@@ -652,8 +652,12 @@ class PlotSample(BasePlotCallback):
         ].cpu()
         data = self.post_processors_state(input_tensor).numpy()
 
-        output_tensor = self.post_processors_state(
+        output_tensor1 = self.post_processors_state(
             torch.cat(tuple(x[self.sample_idx : self.sample_idx + 1, ...].cpu() for x in outputs[1])),
+            in_place=False,
+        ).numpy()
+        output_tensor2 = self.post_processors_state(  # these are the noised targets
+            torch.cat(tuple(x[self.sample_idx : self.sample_idx + 1, ...].cpu() for x in outputs[2])),
             in_place=False,
         ).numpy()
 
@@ -666,7 +670,8 @@ class PlotSample(BasePlotCallback):
                 self.config.diagnostics.plot.cmap_accumulation,
                 data[0, ...].squeeze(),
                 data[rollout_step + 1, ...].squeeze(),
-                output_tensor[rollout_step, ...],
+                output_tensor1[rollout_step, ...],
+                output_tensor2[rollout_step, ...],
                 precip_and_related_fields=self.precip_and_related_fields,
             )
 
