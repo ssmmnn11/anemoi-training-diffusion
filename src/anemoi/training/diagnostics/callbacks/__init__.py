@@ -237,7 +237,8 @@ class RolloutEval(Callback):
             with context:
                 with torch.no_grad():
                     # TODO(jakob): Use rollout of callbacks instead of trainer.rollout here
-                    loss, metrics, y_preds = pl_module._step(
+
+                    loss, metrics, y_preds, y_noiseds = pl_module._step(
                         batch, batch_idx, validation_mode=True, in_place_proc=False, use_checkpoint=False
                     )
                     self._log(pl_module, loss, metrics, batch.shape[0])

@@ -346,6 +346,8 @@ class AnemoiTrainer:
             datamodule=self.datamodule,
             ckpt_path=None if self.load_weights_only else self.last_checkpoint,
         )
+        trainer.predict(self.model, datamodule=self.datamodule, ckpt_path=None if self.load_weights_only else self.last_checkpoint)
+
 
         if self.config.diagnostics.print_memory_summary:
             LOGGER.debug("memory summary: %s", torch.cuda.memory_summary())

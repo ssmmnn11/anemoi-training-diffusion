@@ -498,6 +498,34 @@ class GraphForecaster(pl.LightningModule):
                 sync_dist=True,
             )
         return val_loss, y_preds, y_noiseds
+    
+    def predict_step(self, batch: torch.Tensor, batch_idx: int, fcstep: int = 0, plot_diag: bool = False, ) -> torch.Tensor:
+        # here check what is multi_step
+        # what is the shape of batch
+        # what is data_indices.data.input.full shape
+        # x -> torch.Size([1, 2, 40320, 95])
+        # batch -> torch.Size([1, 3, 40320, 96])
+        # multi_step = 2
+        x = batch[:, 0 : self.multi_step, ..., self.data_indices.data.input.full]
+        y_preds = []
+        y_truth = []
+
+        for rollout_step in range(self.rollout):
+            y_pred = self.model.predict_step(x)
+
+            y = batch[:, self.multi_step + rollout_step, ..., self.data_indices.data.output.full]
+
+            # x = self.advance_input_sampling(x, y_pred, batch, rollout_step)
+            x = batch[:, 0 + rollout_step : self.multi_step + rollout_step, ..., self.data_indices.data.input.full]
+            print(rollout_step)
+            y_preds.append(y_pred)
+            y_truth.append(y)
+            # for callback in self.trainer.callbacks:
+            #     if isinstance(callback, PlotSampleDiffSampling):
+            #         # Call the on_predict_batch_end method to trigger the plotting
+            #         callback.lol(self.trainer, self, y_pred, batch, batch_idx, rollout_step)
+
+        return 0
 
     def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict]]:
         if self.use_zero_optimizer:
