@@ -216,7 +216,7 @@ class NativeGridDataset(IterableDataset):
         else:
             shuffled_chunk_indices = self.valid_date_indices[self.chunk_index_range]
 
-        LOGGER.info(
+        LOGGER.debug(
             (
                 "Worker pid %d, label %s, worker id %d, global_rank %d, "
                 "model comm group %d, group_rank %d using indices[0:10]: %s"
