@@ -207,6 +207,9 @@ class AnemoiDatasetsDataModule(pl.LightningDataModule):
 
     def val_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.ds_valid, "validation")
+    
+    def predict_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.ds_test, "validation")
 
     def test_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.ds_test, "test")
