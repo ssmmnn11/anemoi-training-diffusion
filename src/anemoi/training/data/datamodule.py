@@ -162,6 +162,22 @@ class AnemoiDatasetsDataModule(pl.LightningDataModule):
             label="test",
         )
 
+    @cached_property
+    def ds_predict(self) -> NativeGridDataset:
+        assert self.config.dataloader.training.end < self.config.dataloader.predict.start, (
+            f"Training end date {self.config.dataloader.training.end} is not before"
+            f"predict start date {self.config.dataloader.predict.start}"
+        )
+        assert self.config.dataloader.validation.end < self.config.dataloader.predict.start, (
+            f"Validation end date {self.config.dataloader.validation.end} is not before"
+            f"predict start date {self.config.dataloader.predict.start}"
+        )
+        return self._get_dataset(
+            open_dataset(OmegaConf.to_container(self.config.dataloader.predict, resolve=True)),
+            shuffle=False,
+            label="predict",
+        )
+
     def _get_dataset(
         self,
         data_reader: Callable,
@@ -186,7 +202,7 @@ class AnemoiDatasetsDataModule(pl.LightningDataModule):
         return data
 
     def _get_dataloader(self, ds: NativeGridDataset, stage: str) -> DataLoader:
-        assert stage in {"training", "validation", "test"}
+        assert stage in {"training", "validation", "test", "predict"}
         return DataLoader(
             ds,
             batch_size=self.config.dataloader.batch_size[stage],
@@ -201,6 +217,9 @@ class AnemoiDatasetsDataModule(pl.LightningDataModule):
             prefetch_factor=self.config.dataloader.prefetch_factor,
             persistent_workers=True,
         )
+
+    def predict_dataloader(self) -> DataLoader:
+        return self._get_dataloader(self.ds_predict, "predict")
 
     def train_dataloader(self) -> DataLoader:
         return self._get_dataloader(self.ds_train, "training")

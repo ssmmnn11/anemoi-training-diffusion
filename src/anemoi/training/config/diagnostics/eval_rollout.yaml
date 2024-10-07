@@ -96,3 +96,5 @@ log:
 
 enable_progress_bar: true
 print_memory_summary: false
+
+trainer_predict_step: true

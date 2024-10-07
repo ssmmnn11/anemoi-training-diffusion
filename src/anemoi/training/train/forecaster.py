@@ -323,6 +323,7 @@ class GraphForecaster(pl.LightningModule):
 
         # state x is not processed)
         x = batch[:, 0 : self.multi_step, ..., self.data_indices.data.input.full]  # (bs, multi_step, latlon, nvar)
+        # why do we need self.data_indices.data.input.full here? removes one variable it seems ...
 
         y_preds = []
         y_noiseds = []  # these are inital state + noised target tendency
@@ -498,6 +499,12 @@ class GraphForecaster(pl.LightningModule):
                 sync_dist=True,
             )
         return val_loss, y_preds, y_noiseds
+
+    def predict_step(self, batch: torch.Tensor, batch_idx: int) -> None:
+        del batch_idx
+        # this here predicts only one forecast step ; could add logic to to full 360h ...
+        with torch.no_grad():
+            return self.model.predict_step(batch, from_trainer=True)
 
     def configure_optimizers(self) -> tuple[list[torch.optim.Optimizer], list[dict]]:
         if self.use_zero_optimizer:
