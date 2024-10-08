@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from anemoi.training.commands import Command
@@ -31,6 +33,8 @@ class Train(Command):
 
     def run(self, args: argparse.Namespace, unknown_args: list[str] | None = None) -> None:
 
+        # This will be picked up by the logger
+        os.environ["ANEMOI_TRAINING_CMD"] = f"{sys.argv[0]} {args.command}"
         # Merge the known subcommands with a non-whitespace character for hydra
         new_sysargv = self._merge_sysargv(args)
 
@@ -49,6 +53,9 @@ class Train(Command):
     def _merge_sysargv(self, args: argparse.Namespace) -> str:
         """Merge the sys.argv with the known subcommands to pass to hydra.
 
+        This is done for interactive DDP, which will spawn the rank > 0 processes from sys.argv[0]
+        and for hydra, which ingests sys.argv[1:]
+
         Parameters
         ----------
         args : argparse.Namespace
@@ -59,7 +66,12 @@ class Train(Command):
         str
             Modified sys.argv as string
         """
-        modified_sysargv = f"{sys.argv[0]} {args.command}"
+        argv = Path(sys.argv[0])
+
+        # this will turn "/env/bin/anemoi-training train" into "/env/bin/.anemoi-training-train"
+        # the dot at the beginning is intentional to not interfere with autocomplete
+        modified_sysargv = argv.with_name(f".{argv.name}-{args.command}")
+
         if hasattr(args, "subcommand"):
             modified_sysargv += f" {args.subcommand}"
         return modified_sysargv
