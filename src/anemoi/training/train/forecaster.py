@@ -127,7 +127,10 @@ class GraphForecaster(pl.LightningModule):
 
         self.rho = config.training.noise.rho
 
-        self.use_zero_optimizer = config.training.zero_optimizer
+        self.use_zero_optimizer = config.training.optimizer.zero_optimizer
+        self.opt_weight_decay = config.training.optimizer.weight_decay
+        self.opt_betas = (config.training.optimizer.beta0, config.training.optimizer.beta1)
+        self.eps = config.training.optimizer.eps
 
         self.model_comm_group = None
 
@@ -511,14 +514,18 @@ class GraphForecaster(pl.LightningModule):
             optimizer = ZeroRedundancyOptimizer(
                 self.trainer.model.parameters(),
                 optimizer_class=torch.optim.AdamW,
-                betas=(0.9, 0.95),
+                betas=self.opt_betas,
+                eps=self.eps,
                 lr=self.lr,
+                weight_decay=self.opt_weight_decay,
             )
         else:
             optimizer = torch.optim.AdamW(
                 self.trainer.model.parameters(),
-                betas=(0.9, 0.95),
+                betas=self.opt_betas,
+                eps=self.eps,
                 lr=self.lr,
+                weight_decay=self.opt_weight_decay,
             )  # , fused=True)
 
         scheduler = CosineLRScheduler(
