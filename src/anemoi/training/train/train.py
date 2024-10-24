@@ -347,6 +347,8 @@ class AnemoiTrainer:
             datamodule=self.datamodule,
             ckpt_path=None if self.load_weights_only else self.last_checkpoint,
         )
+        trainer.predict(self.model, datamodule=self.datamodule, ckpt_path=None if self.load_weights_only else self.last_checkpoint)
+
 
         if self.config.diagnostics.trainer_predict_step:
             trainer.predict(self.model, datamodule=self.datamodule, ckpt_path="last")
